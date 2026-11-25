@@ -1,0 +1,3 @@
+// Use a bundle ID registered to your Apple Developer team for device signing.
+PHONE_BUNDLE_ID = jp.ac.watchrtm.si2026
+DEVELOPMENT_TEAM =

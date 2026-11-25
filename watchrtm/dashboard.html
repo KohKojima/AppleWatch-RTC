@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apple Watch RTC</title>
+<style>
+  :root { color-scheme: dark; font: 16px system-ui, sans-serif; background: #101719; color: #eef7f3; }
+  body { max-width: 66rem; padding: 2.5rem clamp(1rem, 5vw, 4rem); margin: auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+  h1 { margin: 0 0 1rem; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.05em; }
+  h2 { margin: 0 0 .8rem; font-size: 1rem; }
+  p { margin: .35rem 0; } small, .muted { color: #a7beb7; }
+  #link { color: #91e4c3; } .status { margin-bottom: 1.6rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+  section { background: #192426; border: 1px solid #314446; border-radius: 14px; padding: 1.25rem; }
+  .reading { font-size: 2.15rem; letter-spacing: -.05em; color: #91e4c3; font-variant-numeric: tabular-nums; }
+  .wide { margin-top: 1rem; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; text-align: left; }
+  th, td { padding: .6rem .55rem; border-bottom: 1px solid #314446; }
+  th { color: #a7beb7; font-size: .85rem; }
+  form { display: flex; align-items: end; gap: .75rem; flex-wrap: wrap; }
+  label { display: grid; gap: .35rem; }
+  input, select, button { color: inherit; background: #101719; border: 1px solid #557472; border-radius: 7px; padding: .55rem; font: inherit; }
+  button { cursor: pointer; }
+  li { margin-block: .5rem; } li button { padding: .2rem .4rem; margin-left: .7rem; }
+</style>
+<header><h1>Apple Watch RTC</h1><p id="link" role="status">接続を確認中</p></header>
+<p class="status muted" id="mode"></p>
+<div class="grid">
+  <section><h2>心拍数</h2><p id="heart" class="reading">—</p><small id="heartTime"></small></section>
+  <section><h2>腕の方位と加速度</h2><p id="yaw" class="reading">—</p><small id="axes"></small></section>
+  <section><h2>直近24時間の睡眠</h2><p id="sleep" class="reading">—</p><small id="sleepNote"></small></section>
+</div>
+<section class="wide">
+  <h2>今日のタスク</h2>
+  <p id="priority" class="muted"></p>
+  <ol id="tasks"></ol>
+  <form id="taskForm">
+    <label>タスク名<input id="taskName" required maxlength="80"></label>
+    <label>種類<select id="taskType"><option value="focus">集中作業</option><option value="light">軽作業</option></select></label>
+    <button type="submit">追加</button>
+  </form>
+</section>
+<section class="wide">
+  <h2>機器へのコマンド</h2>
+  <div class="scroll"><table><thead><tr><th>時刻</th><th>機器</th><th>操作</th><th>結果</th></tr></thead><tbody id="actions"></tbody></table></div>
+  <p id="empty" class="muted">実行履歴はありません</p>
+</section>
+<script>
+const byId = id => document.getElementById(id);
+const set = (id, text) => { byId(id).textContent = text; };
+const labels = { curtain: 'カーテン', light: '照明', alarm: 'アラーム', open: '全開', close: '全閉', bright: '明るく', dim: '暗く', ring: '鳴動', simulated: '模擬出力', accepted: '受理', skipped: '設定なし', expired: '期限切れ', error: 'エラー' };
+const clock = t => new Date(t * 1000).toLocaleTimeString('ja-JP');
+let tasks = [];
+try { tasks = JSON.parse(localStorage.getItem('watchrtm.tasks')) ?? []; } catch {}
+let priority = 'none';
+function renderTasks() {
+  const list = byId('tasks');
+  list.replaceChildren();
+  const order = tasks.map((task, index) => ({ ...task, index }));
+  if (priority !== 'none') order.sort((a, b) => (b.type === priority) - (a.type === priority));
+  for (const task of order) {
+    const item = document.createElement('li');
+    item.textContent = `${task.name}（${task.type === 'focus' ? '集中作業' : '軽作業'}）`;
+    const button = document.createElement('button');
+    button.textContent = '完了';
+    button.addEventListener('click', () => { tasks.splice(task.index, 1); saveTasks(); });
+    item.append(button);
+    list.append(item);
+  }
+}
+function saveTasks() {
+  localStorage.setItem('watchrtm.tasks', JSON.stringify(tasks));
+  renderTasks();
+}
+byId('taskForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const name = byId('taskName').value.trim();
+  if (name) tasks.push({ name, type: byId('taskType').value });
+  byId('taskName').value = '';
+  saveTasks();
+});
+renderTasks();
+function render(data) {
+  const { motion, heart } = data.latest;
+  const connected = data.last_received !== null && data.now - data.last_received < 5;
+  set('link', connected ? 'データ受信中' : 'データ受信待ち');
+  set('mode', data.dry_run ? '模擬出力モード' : '実機出力モード');
+  set('heart', heart ? `${Math.round(heart.bpm)} bpm` : '—');
+  set('heartTime', heart ? `計測 ${clock(heart.t)}` : '');
+  set('yaw', motion ? `${Math.round(motion.yaw) % 360}°` : '—');
+  set('axes', motion ? `${motion.frame === 'magnetic' ? '磁北基準' : '開始時基準'} · 横 ${motion.lateral.toFixed(2)} g · 上下 ${motion.vertical.toFixed(2)} g` : '');
+  set('sleep', data.sleep.hours === null ? '—' : `${data.sleep.hours.toFixed(1)} 時間`);
+  set('sleepNote', `目標 ${data.sleep.goal_hours} 時間`);
+  const tips = { none: '睡眠データが届くまで、入力順に表示します。', focus: '睡眠目標を達成したため、集中作業を先に表示します。', light: '睡眠が目標を下回ったため、軽作業を先に表示します。' };
+  set('priority', tips[data.sleep.priority]);
+  if (priority !== data.sleep.priority) { priority = data.sleep.priority; renderTasks(); }
+  const rows = byId('actions');
+  rows.replaceChildren();
+  for (const action of data.actions) {
+    const row = rows.insertRow();
+    for (const text of [clock(action.result_t), labels[action.target], labels[action.action], labels[action.status]]) {
+      row.insertCell().textContent = text;
+    }
+    row.lastChild.title = action.detail;
+  }
+  byId('empty').hidden = data.actions.length > 0;
+}
+async function refresh() {
+  try {
+    const response = await fetch('/api/v1/status', { cache: 'no-store' });
+    if (!response.ok) throw new Error();
+    render(await response.json());
+  } catch { set('link', 'PCホストに接続できません'); }
+  setTimeout(refresh, 500);
+}
+refresh();
+</script>

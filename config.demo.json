@@ -1,0 +1,6 @@
+{
+  "listen": "127.0.0.1",
+  "database": "data/demo.sqlite3",
+  "rules": {"light_enabled": true},
+  "output": {"dry_run": true}
+}

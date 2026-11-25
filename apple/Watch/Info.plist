@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>CFBundleDisplayName</key><string>Watch RTM</string>
+    <key>NSHealthShareUsageDescription</key><string>Apple Watchの心拍数と睡眠記録を、指定したPCのRTミドルウェアに送信します。</string>
+    <key>NSHealthUpdateUsageDescription</key><string>バックグラウンドで心拍数を計測するため、HealthKitのワークアウトセッションを使用します。</string>
+    <key>NSMotionUsageDescription</key><string>腕の方位と加速度を使ってジェスチャーを判定します。</string>
+    <key>WKApplication</key><true/>
+    <key>WKBackgroundModes</key><array><string>workout-processing</string></array>
+    <key>WKCompanionAppBundleIdentifier</key><string>$(PHONE_BUNDLE_ID)</string>
+    <key>WKRunsIndependentlyOfCompanionApp</key><false/>
+</dict></plist>

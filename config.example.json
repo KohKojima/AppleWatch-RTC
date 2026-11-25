@@ -1,0 +1,34 @@
+{
+  "listen": "0.0.0.0",
+  "port": 8765,
+  "dashboard_port": 8080,
+  "database": "data/watch.sqlite3",
+  "tls_cert": "",
+  "tls_key": "",
+  "rules": {
+    "heading_deg": 0,
+    "heading_tolerance_deg": 35,
+    "curtain_trigger_g": 0.65,
+    "light_trigger_g": 0.75,
+    "release_g": 0.25,
+    "gesture_cooldown_s": 1.6,
+    "motion_max_age_s": 1.0,
+    "alarm_threshold_bpm": 55,
+    "alarm_drop_bpm": 12,
+    "alarm_min_samples": 2,
+    "heart_max_age_s": 15,
+    "heart_max_gap_s": 15,
+    "alarm_cooldown_s": 60,
+    "light_enabled": false
+  },
+  "output": {
+    "dry_run": true,
+    "curtain_id": "",
+    "light_id": "",
+    "bright_percent": 75,
+    "dim_percent": 20,
+    "serial_port": "",
+    "serial_baud": 9600
+  },
+  "sleep_goal_hours": 8
+}
